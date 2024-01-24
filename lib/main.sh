@@ -42,19 +42,34 @@ build_alert_msg() {
 	echo "$alert_msg"
 }
 
+escape_json_str() {
+	local text="$1"
+	if [ -x "$(command -v jq)" ]
+	then
+		echo -n "$text" | jq -Rrsa .
+	else
+		printf '"'
+		printf "%s" "$text" | sed 's/\\/\\\\/g' | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' | sed 's/"/\\"/g' | sed 's/\t/\\t/g'
+		printf '"'
+	fi
+}
+
 _send_discord() {
 	local message="$1"
 	local url
 	url="${CFG_PL_DISK_DISCORD_WEBHOOK_URL:-}"
 	[[ "$url" == "" ]] && return
 
+	local tmp_json=./lib/tmp/plugin_disk_discord_payload.json
+	message="$(escape_json_str "$message")"
+	printf '{"content": %s}' "$message" > "$tmp_json"
 	curl \
-		-i \
 		-H "Accept: application/json" \
 		-H "Content-Type:application/json" \
 		-X POST \
-		--data "{\"content\": \"$message\"}" \
+		--data @"$tmp_json" \
 		"$url"
+	rm "$tmp_json"
 }
 
 _send_logfile() {
