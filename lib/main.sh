@@ -39,7 +39,7 @@ build_alert_msg() {
 	do
 		alert_msg+="$alert\n"
 	done
-	echo "$alert_msg"
+	echo -e "$alert_msg"
 }
 
 escape_json_str() {
