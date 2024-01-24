@@ -42,13 +42,33 @@ build_alert_msg() {
 	echo "$alert_msg"
 }
 
+_send_discord() {
+	local message="$1"
+	local url
+	url="${CFG_PL_DISK_DISCORD_WEBHOOK_URL:-}"
+	[[ "$url" == "" ]] && return
+
+	curl \
+		-i \
+		-H "Accept: application/json" \
+		-H "Content-Type:application/json" \
+		-X POST \
+		--data "{\"content\": \"$message\"}" \
+		"$url"
+}
+
+_send_logfile() {
+	local message="$1"
+	printf '%b\n' "$message"
+}
+
 send_alerts() {
 	local alert_msg
 	alert_msg="$(build_alert_msg)"
 	[[ "$alert_msg" == "" ]] && return
 
-	printf '%b\n' "$alert_msg"
-	# TODO: actually send it somewhere lol
+	_send_logfile "$alert_msg"
+	_send_discord "$alert_msg"
 }
 
 add_alert() {
