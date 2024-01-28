@@ -94,7 +94,7 @@ send_alerts() {
 	[[ "$alert_msg" == "" ]] && return
 
 	_send_logfile "$alert_msg"
-	_send_discord '```'"\n$alert_msg\n"'```'
+	_send_discord '```'"$alert_msg"'```'
 }
 
 add_alert() {
