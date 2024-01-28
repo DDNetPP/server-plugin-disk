@@ -20,20 +20,31 @@ fi
 
 _alerts=()
 
+repeat_str() {
+	local text="$1"
+	local num="$2"
+	local i
+	for((i=0;i<num;i++))
+	do
+		printf '%s' "$text"
+	done
+}
+
 build_alert_msg() {
 	[[ "${#_alerts[@]}" == "0" ]] && return
 
 	local server_folder_du
-	server_folder_du="$(du -hd 1)"
+	server_folder_du="$(du -hd 1 | awk '{ print "  " $0 }')"
 	local alert_msg=''
-	alert_msg+="!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-	alert_msg+="!!! Disk pressure alert on $CFG_SRV_NAME !!!\n"
-	alert_msg+="!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+	local header_len=45
+	alert_msg+="$(repeat_str '!' "$header_len")\n"
+	alert_msg+="!!! $(printf '%-*s' "$((header_len - 8))" "Disk pressure alert on $CFG_SRV_NAME") !!!\n"
+	alert_msg+="$(repeat_str '!' "$header_len")\n"
 	alert_msg+="date: $(date)\n"
-	alert_msg+="max disk usage: ${CFG_PL_DISK_MAX_USAGE}%\n"
+	alert_msg+="$(repeat_str '-' "$header_len")\n"
 	alert_msg+="Folder storage usage in $CFG_SRV_NAME:\n"
 	alert_msg+="${server_folder_du}\n"
-	alert_msg+="disks:\n"
+	alert_msg+="$(repeat_str '-' "$header_len")\n"
 	local alert
 	for alert in "${_alerts[@]}"
 	do
@@ -83,7 +94,7 @@ send_alerts() {
 	[[ "$alert_msg" == "" ]] && return
 
 	_send_logfile "$alert_msg"
-	_send_discord "$alert_msg"
+	_send_discord '```'"\n$alert_msg\n"'```'
 }
 
 add_alert() {
@@ -94,6 +105,7 @@ add_alert() {
 check_disk_usage() {
 	local disk
 	local usage
+	local warning_disks=()
 	while read -r disk
 	do
 		usage="$(echo "$disk" | awk '{ print $5 }')"
@@ -109,9 +121,18 @@ check_disk_usage() {
 		fi
 		if [ "$usage" -gt "$CFG_PL_DISK_MAX_USAGE" ]
 		then
-			add_alert "Warning: disk pressure $disk"
+			warning_disks+=("$disk")
 		fi
 	done < <(df -h | grep -Ev '^(/dev/loop|tmpfs|udev|Filesystem)' | grep -Ev '(/boot/efi)$')
+	if [ "${#warning_disks[@]}" -gt "0" ]
+	then
+		add_alert "Disks with more than ${CFG_PL_DISK_MAX_USAGE}% usage:"
+		add_alert "  $(df -h | head -n1)"
+	fi
+	for disk in "${warning_disks[@]}"
+	do
+		add_alert "  $disk"
+	done
 }
 
 check_disk_usage
