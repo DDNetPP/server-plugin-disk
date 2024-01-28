@@ -97,7 +97,6 @@ check_disk_usage() {
 	while read -r disk
 	do
 		usage="$(echo "$disk" | awk '{ print $5 }')"
-		echo "usage: $usage"
 		if [[ "$usage" == *% ]]
 		then
 			usage="${usage::-1}"
@@ -113,7 +112,6 @@ check_disk_usage() {
 			add_alert "Warning: disk pressure $disk"
 		fi
 	done < <(df -h | grep -Ev '^(/dev/loop|tmpfs|udev|Filesystem)' | grep -Ev '(/boot/efi)$')
-	df -h | grep -Ev '^(/dev/loop|tmpfs|udev|Filesystem)' | grep -Ev '(/boot/efi)$'
 }
 
 check_disk_usage
