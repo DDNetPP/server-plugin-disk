@@ -106,6 +106,8 @@ check_disk_usage() {
 	local disk
 	local usage
 	local warning_disks=()
+	local used
+	local size
 	while read -r disk
 	do
 		usage="$(echo "$disk" | awk '{ print $5 }')"
@@ -122,9 +124,15 @@ check_disk_usage() {
 		if [ "$usage" -gt "$CFG_PL_DISK_MAX_USAGE" ]
 		then
 			warning_disks+=("$disk")
+			used="$(echo "$disk" | awk '{ print $3 }')"
+			size="$(echo "$disk" | awk '{ print $2 }')"
 		fi
 	done < <(df -h | grep -Ev '^(/dev/loop|tmpfs|udev|Filesystem)' | grep -Ev '(/boot/efi)$')
 	if [ "${#warning_disks[@]}" -gt "0" ]
+	then
+		add_alert "YOUR DISK USAGE: ${usage}% $size/$used"
+		add_alert "MAX  DISK USAGE: ${CFG_PL_DISK_MAX_USAGE}%"
+	elif [ "${#warning_disks[@]}" -gt "0" ]
 	then
 		add_alert "Disks with more than ${CFG_PL_DISK_MAX_USAGE}% usage:"
 		add_alert "  $(df -h | head -n1)"
